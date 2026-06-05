@@ -2,13 +2,12 @@
 
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PineappleController;
+use App\Http\Controllers\UjiLabController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
-// Langsung arahkan halaman utama ke Login
 Route::redirect('/', '/login');
 
-// Mengarahkan dashboard ke Controller agar kodenya dinamis (bukan text mati)
 Route::get('/dashboard', [PineappleController::class, 'dashboard'])->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
@@ -16,8 +15,11 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
-    // Route eksekusi simpan foto
     Route::post('/pineapples', [PineappleController::class, 'store'])->name('pineapples.store');
+
+    // Route Uji Lab
+    Route::get('/uji-lab', [UjiLabController::class, 'index'])->name('ujilab.index');
+    Route::post('/uji-lab', [UjiLabController::class, 'store'])->name('ujilab.store');
 });
 
 require __DIR__.'/auth.php';

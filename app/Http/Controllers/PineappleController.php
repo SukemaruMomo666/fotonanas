@@ -7,7 +7,7 @@ use App\Models\Photo;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Log; // Tambahan untuk mencatat error
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 
 class PineappleController extends Controller
@@ -77,19 +77,17 @@ class PineappleController extends Controller
                 $file = $request->file($angle);
                 $filename = $kodeNanas . '_' . $angle . '.' . $file->getClientOriginalExtension();
 
-                // A. Simpan cadangan di lokal server dulu (Cepat)
-                $localPath = $file->storeAs('public/nanas_lokal', $filename);
-
                 try {
-                    // B. LANGSUNG GAS UPLOAD KE GOOGLE DRIVE
+                    // LANGSUNG GAS UPLOAD KE GOOGLE DRIVE DARI MEMORI SEMENTARA
+                    // Tanpa disave ke folder lokal/public hostingan sama sekali
                     Storage::disk('google')->put($kodeNanas . '/' . $filename, fopen($file->getRealPath(), 'r+'));
                     $statusUpload = 'done';
                     $drivePath = $kodeNanas . '/' . $filename;
                 } catch (\Exception $e) {
-                    // C. JIKA GAGAL UPLOAD KE DRIVE: Catat errornya di background
+                    // JIKA GAGAL UPLOAD KE DRIVE: Catat errornya di background
                     Log::error("Gagal Upload Drive untuk Nanas {$kodeNanas} angle {$angle}: " . $e->getMessage());
 
-                    // Status jadi pending, nanti bisa dibuatkan tombol "Upload Ulang"
+                    // Status jadi pending
                     $statusUpload = 'pending';
                     $drivePath = null;
                 }
@@ -98,7 +96,7 @@ class PineappleController extends Controller
                 Photo::create([
                     'pineapple_id' => $pineapple->id,
                     'angle' => $angle,
-                    'lokasi_lokal' => $localPath,
+                    'lokasi_lokal' => null, // Dikosongkan karena kita nggak nyimpen di lokal lagi
                     'lokasi_drive' => $drivePath,
                     'status_upload' => $statusUpload
                 ]);
