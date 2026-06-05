@@ -2,8 +2,11 @@
 
 namespace App\Providers;
 
-use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Filesystem\FilesystemAdapter;
+use League\Flysystem\Filesystem;
+use Masbug\Flysystem\GoogleDriveAdapter;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -20,6 +23,20 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        Vite::prefetch(concurrency: 3);
+        // Jembatan penghubung agar Laravel mengenali driver 'google'
+        Storage::extend('google', function($app, $config) {
+            $client = new \Google\Client();
+            $client->setClientId($config['clientId']);
+            $client->setClientSecret($config['clientSecret']);
+            $client->refreshToken($config['refreshToken']);
+
+            $service = new \Google\Service\Drive($client);
+
+            // Konfigurasi folder tujuan
+            $adapter = new GoogleDriveAdapter($service, $config['folderId'] ?? '');
+            $driver = new Filesystem($adapter);
+
+            return new FilesystemAdapter($driver, $adapter, $config);
+        });
     }
 }
