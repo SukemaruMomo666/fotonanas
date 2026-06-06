@@ -88,71 +88,73 @@ export default function Index({ auth, pineapples }) {
         });
     }, [pineapples, searchTerm]);
 
-    // --- LOGIC EXPORT TO EXCEL (CSV) ---
-    const exportToCSV = () => {
-        const headers = [
-            "Kode Nanas",
-            "Uji Ke",
-            "Ukuran",
-            "Brix",
-            "TAT",
-            "pH",
-            "Vit C",
-            "Status Cacat",
-            "Bentuk Mahkota",
-            "Kelayakan",
-        ];
-        const separator = ";";
-        const csvRows = [];
-
-        csvRows.push(headers.join(separator));
+    // --- LOGIC EXPORT TO EXCEL (Native Format) ---
+    const exportToExcel = () => {
+        let html = `
+            <table border="1">
+                <thead>
+                    <tr>
+                        <th>Kode Nanas</th>
+                        <th>Uji Ke</th>
+                        <th>Ukuran</th>
+                        <th>Bentuk Mahkota</th>
+                        <th>Brix</th>
+                        <th>TAT</th>
+                        <th>pH</th>
+                        <th>Vit C</th>
+                        <th>Status Cacat</th>
+                        <th>Kelayakan</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
 
         filteredPineapples.forEach((p) => {
-            // Ambil data fisik yang di-merge
             const sharedData = {
-                ukuran: p.uji_labs?.find((u) => u.ukuran)?.ukuran || "",
+                ukuran: p.uji_labs?.find((u) => u.ukuran)?.ukuran || "-",
                 bentuk_mahkota:
                     p.uji_labs?.find((u) => u.bentuk_mahkota)?.bentuk_mahkota ||
-                    "",
+                    "-",
                 status_cacat:
-                    p.uji_labs?.find((u) => u.status_cacat)?.status_cacat || "",
+                    p.uji_labs?.find((u) => u.status_cacat)?.status_cacat ||
+                    "-",
                 kelayakan:
                     p.uji_labs?.find((u) => u.kelayakan)?.kelayakan || "",
             };
 
-            [1, 2, 3].forEach((ujiKe) => {
+            [1, 2, 3].forEach((ujiKe, indexUji) => {
                 const row =
                     p.uji_labs?.find((u) => u.pengujian_ke === ujiKe) || {};
-                const values = [
-                    `"${p.kode_nanas}"`,
-                    `"${ujiKe}"`,
-                    `"${sharedData.ukuran}"`,
-                    `"${row.brix || ""}"`,
-                    `"${row.tat || ""}"`,
-                    `"${row.ph || ""}"`,
-                    `"${row.vit_c || ""}"`,
-                    `"${sharedData.status_cacat}"`,
-                    `"${sharedData.bentuk_mahkota}"`,
-                    `"${sharedData.kelayakan}"`,
-                ];
-                csvRows.push(values.join(separator));
+
+                html += `
+                    <tr>
+                        <td>${indexUji === 0 ? p.kode_nanas : ""}</td>
+                        <td>${ujiKe}</td>
+                        <td>${indexUji === 0 ? sharedData.ukuran : ""}</td>
+                        <td>${indexUji === 0 ? sharedData.bentuk_mahkota : ""}</td>
+                        <td>${row.brix || ""}</td>
+                        <td>${row.tat || ""}</td>
+                        <td>${row.ph || ""}</td>
+                        <td>${row.vit_c || ""}</td>
+                        <td>${indexUji === 0 ? sharedData.status_cacat : ""}</td>
+                        <td>${indexUji === 0 ? sharedData.kelayakan : ""}</td>
+                    </tr>
+                `;
             });
         });
 
-        const csvString = "\uFEFF" + csvRows.join("\n");
-        const blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
+        html += `</tbody></table>`;
+
+        // Create Blob
+        const blob = new Blob([html], { type: "application/vnd.ms-excel" });
         const url = URL.createObjectURL(blob);
 
         const link = document.createElement("a");
-        link.setAttribute("href", url);
-        link.setAttribute(
-            "download",
-            `Data_Lab_Nanas_${new Date().toISOString().slice(0, 10)}.csv`,
-        );
+        link.href = url;
+        link.download = `Rekap_Uji_Lab_${new Date().toISOString().slice(0, 10)}.xls`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        URL.revokeObjectURL(url);
     };
 
     const handleEditClick = (id, ujiKe) => {
@@ -448,7 +450,7 @@ export default function Index({ auth, pineapples }) {
 
                         <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
                             <button
-                                onClick={exportToCSV}
+                                onClick={exportToExcel}
                                 className="inline-flex justify-center items-center px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white text-sm font-bold rounded-xl shadow-md transition-colors active:scale-[0.98]"
                             >
                                 <svg
