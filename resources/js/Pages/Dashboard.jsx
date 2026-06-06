@@ -27,11 +27,15 @@ export default function Dashboard({ auth, nextKodeNanas }) {
         samping_kiri: null,
     });
 
-    // Fungsi menyalakan kamera belakang
+    // Fungsi menyalakan kamera belakang dengan kualitas tinggi
     const startCamera = async () => {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: "environment" }, // Paksa pakai kamera belakang
+                video: {
+                    facingMode: "environment", // Paksa pakai kamera belakang
+                    width: { ideal: 1920 }, // Minta resolusi tinggi (Full HD)
+                    height: { ideal: 1080 },
+                },
             });
             if (videoRef.current) {
                 videoRef.current.srcObject = stream;
@@ -82,7 +86,7 @@ export default function Dashboard({ auth, nextKodeNanas }) {
             // Lukis frame saat ini ke dalam canvas
             context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-            // Ubah lukisan canvas menjadi file JPG asli (kualitas 80% agar ringan di-upload)
+            // Ubah lukisan canvas menjadi file JPG asli (Kualitas 100% biar jernih)
             canvas.toBlob(
                 (blob) => {
                     if (blob) {
@@ -102,7 +106,7 @@ export default function Dashboard({ auth, nextKodeNanas }) {
                     }
                 },
                 "image/jpeg",
-                0.8,
+                1.0, // <--- Kualitas maksimal (1.0 = 100%)
             );
         }
     };
@@ -154,7 +158,6 @@ export default function Dashboard({ auth, nextKodeNanas }) {
             <div className="py-4 sm:py-6 px-4 sm:px-0">
                 <div className="max-w-md mx-auto">
                     <div className="bg-white dark:bg-gray-800 overflow-hidden shadow-xl sm:shadow-2xl rounded-2xl p-5 sm:p-6">
-                        
                         {/* Step 1-5: Proses Foto */}
                         {currentStep < angles.length && (
                             <div className="space-y-5">
@@ -172,7 +175,9 @@ export default function Dashboard({ auth, nextKodeNanas }) {
                                     {/* Jika sudah difoto: Tampilkan Hasil */}
                                     {previews[angles[currentStep].id] ? (
                                         <img
-                                            src={previews[angles[currentStep].id]}
+                                            src={
+                                                previews[angles[currentStep].id]
+                                            }
                                             alt={angles[currentStep].label}
                                             className="w-full h-full object-cover transform scale-100"
                                         />
@@ -190,15 +195,38 @@ export default function Dashboard({ auth, nextKodeNanas }) {
                                             {/* Efek Loading sebelum kamera siap */}
                                             {!isCameraReady && (
                                                 <div className="absolute flex flex-col items-center justify-center text-white opacity-80 animate-pulse">
-                                                    <svg className="w-10 h-10 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-                                                    <span className="text-sm font-medium">Membuka Kamera...</span>
+                                                    <svg
+                                                        className="w-10 h-10 mb-2"
+                                                        fill="none"
+                                                        stroke="currentColor"
+                                                        viewBox="0 0 24 24"
+                                                    >
+                                                        <path
+                                                            strokeLinecap="round"
+                                                            strokeLinejoin="round"
+                                                            strokeWidth="2"
+                                                            d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
+                                                        ></path>
+                                                        <path
+                                                            strokeLinecap="round"
+                                                            strokeLinejoin="round"
+                                                            strokeWidth="2"
+                                                            d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
+                                                        ></path>
+                                                    </svg>
+                                                    <span className="text-sm font-medium">
+                                                        Membuka Kamera...
+                                                    </span>
                                                 </div>
                                             )}
                                         </>
                                     )}
 
                                     {/* Canvas tersembunyi untuk memproses tangkapan layar */}
-                                    <canvas ref={canvasRef} className="hidden"></canvas>
+                                    <canvas
+                                        ref={canvasRef}
+                                        className="hidden"
+                                    ></canvas>
 
                                     {/* Notifikasi Error Validasi */}
                                     {errors[angles[currentStep].id] && (
@@ -248,14 +276,20 @@ export default function Dashboard({ auth, nextKodeNanas }) {
 
                         {/* Step Selesai (Konfirmasi Upload) */}
                         {currentStep === angles.length && (
-                            <form onSubmit={submit} className="text-center space-y-5 sm:space-y-6">
+                            <form
+                                onSubmit={submit}
+                                className="text-center space-y-5 sm:space-y-6"
+                            >
                                 <div className="bg-green-100 dark:bg-green-900/30 p-5 sm:p-6 rounded-xl border border-green-200 dark:border-green-800 mb-4 sm:mb-6">
-                                    <div className="text-4xl sm:text-5xl mb-3">🍍</div>
+                                    <div className="text-4xl sm:text-5xl mb-3">
+                                        🍍
+                                    </div>
                                     <h2 className="text-xl sm:text-2xl font-extrabold text-green-700 dark:text-green-400 mb-1">
                                         Siap Diupload!
                                     </h2>
                                     <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 font-medium">
-                                        5 Angle Nanas <b>{nextKodeNanas}</b> sudah lengkap.
+                                        5 Angle Nanas <b>{nextKodeNanas}</b>{" "}
+                                        sudah lengkap.
                                     </p>
                                 </div>
 
@@ -275,7 +309,13 @@ export default function Dashboard({ auth, nextKodeNanas }) {
                                             <div
                                                 className="absolute inset-0 bg-black/60 hidden group-hover:flex items-center justify-center text-white text-[9px] sm:text-[10px] font-bold uppercase text-center cursor-pointer"
                                                 onClick={() =>
-                                                    setCurrentStep(angles.findIndex((a) => a.id === angle.id))
+                                                    setCurrentStep(
+                                                        angles.findIndex(
+                                                            (a) =>
+                                                                a.id ===
+                                                                angle.id,
+                                                        ),
+                                                    )
                                                 }
                                             >
                                                 Edit
