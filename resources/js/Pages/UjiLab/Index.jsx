@@ -88,18 +88,18 @@ export default function Index({ auth, pineapples }) {
         });
     }, [pineapples, searchTerm]);
 
-    // --- LOGIC EXPORT TO EXCEL (CSV) DENGAN EFEK VISUAL MERGE ---
+    // --- LOGIC EXPORT TO EXCEL (CSV) ---
     const exportToCSV = () => {
         const headers = [
             "Kode Nanas",
             "Uji Ke",
             "Ukuran",
-            "Bentuk Mahkota",
             "Brix",
             "TAT",
             "pH",
             "Vit C",
             "Status Cacat",
+            "Bentuk Mahkota",
             "Kelayakan",
         ];
         const separator = ";";
@@ -120,24 +120,20 @@ export default function Index({ auth, pineapples }) {
                     p.uji_labs?.find((u) => u.kelayakan)?.kelayakan || "",
             };
 
-            [1, 2, 3].forEach((ujiKe, indexUji) => {
+            [1, 2, 3].forEach((ujiKe) => {
                 const row =
                     p.uji_labs?.find((u) => u.pengujian_ke === ujiKe) || {};
-
-                // Trik: Baris ke-2 dan ke-3 dikosongkan pada atribut fisiknya agar terlihat seperti di-merge di Excel
-                const isFirstRow = indexUji === 0;
-
                 const values = [
-                    `"${isFirstRow ? p.kode_nanas : ""}"`,
+                    `"${p.kode_nanas}"`,
                     `"${ujiKe}"`,
-                    `"${isFirstRow ? sharedData.ukuran : ""}"`,
-                    `"${isFirstRow ? sharedData.bentuk_mahkota : ""}"`,
+                    `"${sharedData.ukuran}"`,
                     `"${row.brix || ""}"`,
                     `"${row.tat || ""}"`,
                     `"${row.ph || ""}"`,
                     `"${row.vit_c || ""}"`,
-                    `"${isFirstRow ? sharedData.status_cacat : ""}"`,
-                    `"${isFirstRow ? sharedData.kelayakan : ""}"`,
+                    `"${sharedData.status_cacat}"`,
+                    `"${sharedData.bentuk_mahkota}"`,
+                    `"${sharedData.kelayakan}"`,
                 ];
                 csvRows.push(values.join(separator));
             });
@@ -595,6 +591,7 @@ export default function Index({ auth, pineapples }) {
                                                         key={`${p.id}-${ujiKe}`}
                                                         className={`border-b border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ${rowClass}`}
                                                     >
+                                                        {/* KODE NANAS - MERGE & STICKY */}
                                                         {indexUji === 0 && (
                                                             <td
                                                                 rowSpan="3"
@@ -611,6 +608,7 @@ export default function Index({ auth, pineapples }) {
                                                             </td>
                                                         )}
 
+                                                        {/* UJI KE */}
                                                         <td
                                                             className={`px-4 py-3 text-center border-r border-gray-100 dark:border-gray-700 whitespace-nowrap ${!hasData && "opacity-50"}`}
                                                         >
@@ -619,6 +617,7 @@ export default function Index({ auth, pineapples }) {
                                                             </span>
                                                         </td>
 
+                                                        {/* UKURAN & MAHKOTA - MERGE */}
                                                         {indexUji === 0 && (
                                                             <td
                                                                 rowSpan="3"
@@ -644,6 +643,7 @@ export default function Index({ auth, pineapples }) {
                                                             </td>
                                                         )}
 
+                                                        {/* HASIL LAB KANDUNGAN */}
                                                         <td
                                                             className={`px-4 py-3 text-center font-bold text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-900/10 whitespace-nowrap ${!hasData && "opacity-50"}`}
                                                         >
@@ -665,6 +665,7 @@ export default function Index({ auth, pineapples }) {
                                                             {row.vit_c || "-"}
                                                         </td>
 
+                                                        {/* CACAT & KELAYAKAN - MERGE */}
                                                         {indexUji === 0 && (
                                                             <td
                                                                 rowSpan="3"
@@ -716,6 +717,7 @@ export default function Index({ auth, pineapples }) {
                                                             </td>
                                                         )}
 
+                                                        {/* AKSI */}
                                                         <td className="px-4 py-3 text-center border-l border-gray-100 dark:border-gray-700 whitespace-nowrap">
                                                             <button
                                                                 onClick={() =>
