@@ -5,15 +5,16 @@ namespace App\Http\Controllers;
 use App\Models\Pineapple;
 use App\Models\UjiLab;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+// use Illuminate\Support\Facades\Auth; <-- Ini sudah tidak perlu dipakai lagi di sini
 use Inertia\Inertia;
 
 class UjiLabController extends Controller
 {
     public function index()
     {
-        $pineapples = Pineapple::where('user_id', Auth::id())
-            ->with('ujiLabs')
+        // Tarik SEMUA data nanas dari database beserta relasi uji_labs-nya.
+        // Pembatasan user_id sudah dihapus di sini.
+        $pineapples = Pineapple::with('ujiLabs')
             ->orderBy('id', 'desc')
             ->get();
 
