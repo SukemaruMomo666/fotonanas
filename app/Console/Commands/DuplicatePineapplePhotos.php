@@ -29,7 +29,7 @@ class DuplicatePineapplePhotos extends Command
      */
     public function handle()
     {
-        $this->info('Memulai proses duplikasi foto Nanas...');
+        $this->info('Memulai proses duplikasi foto Nanas (Smart Match Mode)...');
 
         // Ambil semua Photo yang statusnya pending atau gagal
         $pendingPhotos = Photo::where('status_upload', 'pending')->orWhereNull('lokasi_drive')->get();
@@ -42,9 +42,18 @@ class DuplicatePineapplePhotos extends Command
         $this->info('Ditemukan ' . $pendingPhotos->count() . ' foto yang berstatus pending.');
 
         $drive = Storage::disk('google');
-
         $bar = $this->output->createProgressBar($pendingPhotos->count());
         $bar->start();
+
+        // Cache sources to avoid querying database for every photo
+        // Kita ambil semua nanas dari 1 sampai 128 beserta ujiLabs nya
+        $allSources = Pineapple::with('ujiLabs')->get()->filter(function($p) {
+            if (preg_match('/-(\d+)$/', $p->kode_nanas, $m)) {
+                $num = intval($m[1]);
+                return $num >= 1 && $num <= 128;
+            }
+            return false;
+        });
 
         foreach ($pendingPhotos as $photo) {
             $targetPineapple = $photo->pineapple;
@@ -57,22 +66,51 @@ class DuplicatePineapplePhotos extends Command
             $angle = $photo->angle; // contoh: atas
             $prefix = substr($targetKode, 0, 2); // contoh "L-"
 
-            // Pilih nanas sumber secara acak dari L-001 s/d L-128
-            // Supaya fotonya tidak monoton dari 1 nanas saja
-            $randomSourceNumber = rand(1, 128);
-            $sourceKode = $prefix . str_pad($randomSourceNumber, 3, '0', STR_PAD_LEFT); // contoh: L-045
+            // Cari kriteria target (Mahkota & Cacat)
+            // Kita ambil dari uji lab pertama yang datanya tidak kosong
+            $targetUjiLab = $targetPineapple->ujiLabs->first(function($u) {
+                return !empty($u->bentuk_mahkota) || !empty($u->status_cacat);
+            });
+            
+            $targetMahkota = $targetUjiLab ? $targetUjiLab->bentuk_mahkota : null;
+            $targetCacat = $targetUjiLab ? $targetUjiLab->status_cacat : null;
 
-            // Asumsi ekstensi file aslinya jpg (atau cari jika beda, tapi untuk kemudahan kita anggap .jpg/.jpeg/.png)
-            // Namun karena kita nggak tahu pasti ekstensinya, kita cek yang ada di drive
+            // Filter sumber yang COCOK bentuk mahkota dan status cacatnya
+            $matchedSources = $allSources->filter(function($sourcePine) use ($targetMahkota, $targetCacat) {
+                $u = $sourcePine->ujiLabs->first();
+                $m = $u ? $u->bentuk_mahkota : null;
+                $c = $u ? $u->status_cacat : null;
+                
+                // Keduanya harus cocok (jika target punya nilai)
+                $matchMahkota = (!$targetMahkota || $m == $targetMahkota);
+                $matchCacat = (!$targetCacat || $c == $targetCacat);
+                
+                return $matchMahkota && $matchCacat;
+            });
+
+            // Fallback 1: Jika tidak ada yang cocok sempurna, cocokkan salah satu (Mahkota saja)
+            if ($matchedSources->isEmpty() && $targetMahkota) {
+                $matchedSources = $allSources->filter(function($sourcePine) use ($targetMahkota) {
+                    $u = $sourcePine->ujiLabs->first();
+                    return ($u ? $u->bentuk_mahkota : null) == $targetMahkota;
+                });
+            }
+
+            // Fallback 2: Jika masih tidak ada, random murni dari L-001 s/d L-128
+            if ($matchedSources->isEmpty()) {
+                $matchedSources = $allSources;
+            }
+
+            // Pilih satu secara acak dari list yang cocok
+            $sourcePineapple = $matchedSources->random();
+            $sourceKode = $sourcePineapple->kode_nanas;
+
+            // Asumsi ekstensi file aslinya jpg (atau cari jika beda)
             $sourcePathPrefix = $sourceKode . '/' . $sourceKode . '_' . $angle;
             
-            // Karena kita gatau ekstensinya (.jpg, .jpeg, .png), kita bisa list file di folder sumber
-            // Tapi list file per loop itu lambat.
-            // Paling aman kita coba asumsi extensi yang paling umum dulu
             $extensions = ['jpg', 'jpeg', 'png', 'JPG', 'JPEG', 'PNG'];
             $sourcePathFound = null;
 
-            // Jika sebelumnya lokasi_drive kosong, kita cari manual
             foreach ($extensions as $ext) {
                 $possiblePath = $sourcePathPrefix . '.' . $ext;
                 if ($drive->exists($possiblePath)) {
@@ -82,17 +120,13 @@ class DuplicatePineapplePhotos extends Command
             }
 
             if ($sourcePathFound) {
-                // Ekstensi yang didapat
                 $ext = pathinfo($sourcePathFound, PATHINFO_EXTENSION);
-                
                 $targetFileName = $targetKode . '_' . $angle . '.' . $ext;
                 $targetPath = $targetKode . '/' . $targetFileName;
 
                 try {
-                    // Copy file di dalam google drive
                     $drive->copy($sourcePathFound, $targetPath);
 
-                    // Update database
                     $photo->update([
                         'lokasi_drive' => $targetPath,
                         'status_upload' => 'done'
